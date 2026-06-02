@@ -1,0 +1,66 @@
+version: "3.9"
+
+networks:
+  app_net:
+    driver: bridge
+
+services:
+  toonflow:
+    build:
+      context: ./apps/toonflow
+      dockerfile: Dockerfile
+    container_name: slnctrz-toonflow
+    ports:
+      - "${TOONFLOW_PORT:-10588}:10588"
+    env_file: .env
+    environment:
+      - NODE_ENV=production
+      - PORT=10588
+      - OMNIVOICE_URL=http://omnivoice:${OMNIVOICE_PORT:-8880}
+    volumes:
+      - toonflow_data:/app/data
+    networks:
+      - app_net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:10588/api/health', r => {process.exit(r.statusCode===200?0:1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  omnivoice:
+    build:
+      context: ./apps/omnivoice
+      dockerfile: Dockerfile.omnivoice
+    container_name: slnctrz-omnivoice
+    ports:
+      - "${OMNIVOICE_PORT:-8880}:8880"
+    env_file: .env
+    environment:
+      - OMNIVOICE_PORT=8880
+      - OMNIVOICE_HOST=0.0.0.0
+      - OMNIVOICE_DEVICE=${OMNIVOICE_DEVICE:-auto}
+      - OMNIVOICE_MODEL=${OMNIVOICE_MODEL:-k2-fsa/OmniVoice}
+    volumes:
+      - omnivoice_profiles:/app/profiles
+    networks:
+      - app_net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8880/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+volumes:
+  toonflow_data:
+  omnivoice_profiles:

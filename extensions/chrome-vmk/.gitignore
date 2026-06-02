@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+dev/flowforge/.output/
+
+# Reference copies (cloned source, for local compare only - never commit)
+dev/src-toby/
+dev/src-old*/
+dev/toby-ext/
+
+# Build outputs
+dist/
+dev/flowforge/dist/
+dev/flowforge/.output/
+
+# Archives
+dev/source-never-touch.rar
+
+# Environment & secrets
+.env
+
+# Project context (AI agent instructions - personal, not for repo)
+AGENTS.md
+.env.local
+*.key
+*.pem
+*.cert
+
+# OS crap
+Thumbs.db
+.DS_Store
+*.swp
+*.swo
+
+# IDE
+.idea/
+*.suo
+*.user
+*.vs/

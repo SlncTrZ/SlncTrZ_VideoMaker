@@ -1,0 +1,70 @@
+# OS
+Thumbs.db
+.DS_Store
+*.swp
+*.swo
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.yarn/
+.yarnrc.yml
+.pnp.*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+*.egg
+
+# uv / pip
+uv.lock
+Pipfile.lock
+
+# Environment
+.env
+!.env.example
+
+# Logs
+logs/
+*.log
+
+# Data
+data/oss/
+data/db2.sqlite
+data/db2.sqlite-wal
+data/db2.sqlite-shm
+
+# Build output
+apps/toonflow/build/
+apps/toonflow/dist/
+extensions/chrome-vmk/SlncTrZ_Everything-GenAI/dist/
+
+# Electron
+apps/toonflow/release/
+
+# Docker
+docker-data/
+
+# Temp
+tmp/
+temp/
+*.bak

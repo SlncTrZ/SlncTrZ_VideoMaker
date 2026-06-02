@@ -1,0 +1,20 @@
+node_modules/
+.env
+.env.local
+*.key
+*.pem
+*.cert
+Thumbs.db
+.DS_Store
+*.swp
+*.swo
+.idea/
+*.suo
+*.user
+*.vs/
+
+dist/
+SlncTrZ_VMK/dist/
+
+src-old - just for compare/
+google_test_account.txt

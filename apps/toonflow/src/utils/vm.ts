@@ -1,0 +1,212 @@
+import { VM } from "vm2";
+import sharp from "sharp";
+import axios from "axios";
+import { createOpenAI } from "@ai-sdk/openai";
+import { createDeepSeek } from "@ai-sdk/deepseek";
+import { createZhipu } from "zhipu-ai-provider";
+import { createQwen } from "qwen-ai-provider-v5";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { createAnthropic } from "@ai-sdk/anthropic";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { createXai } from "@ai-sdk/xai";
+import { createMinimax } from "vercel-minimax-ai-provider";
+import FormData from "form-data";
+import jsonwebtoken from "jsonwebtoken";
+import u from "@/utils";
+export default function runCode(code: string, vendor?: Record<string, any>) {
+  code = code.replace(/export\s*\{\s*\};?/g, ""); // Remove export {} to avoid sandbox errors
+  // Create a sandbox
+  const exports = {};
+  const sandbox: Record<string, any> = {
+    createOpenAI,
+    createDeepSeek,
+    createZhipu,
+    createQwen,
+    createAnthropic,
+    createOpenAICompatible,
+    createXai,
+    createMinimax,
+    createGoogleGenerativeAI,
+    zipImage,
+    zipImageResolution,
+    urlToBase64,
+    mergeImages,
+    pollTask,
+    fetch: fetch,
+    exports,
+    axios,
+    FormData,
+    logger,
+    jsonwebtoken,
+  };
+  if (vendor !== undefined) {
+    sandbox.vendor = vendor;
+  }
+  const vm = new VM({
+    timeout: 0,
+    sandbox,
+    compiler: "javascript",
+    eval: false,
+    wasm: false,
+  });
+
+  vm.run(code);
+
+  return exports as Record<string, any>;
+}
+export function logger(logstring: any) {
+  console.log("【VM】" + JSON.stringify(logstring));
+}
+/**
+ * Compress image to target size limit
+ */
+export async function zipImage(completeBase64: string, size: number): Promise<string> {
+  let quality = 80;
+  let buffer = Buffer.from(completeBase64.split(",")[1], "base64");
+  let output = await sharp(buffer).jpeg({ quality }).toBuffer();
+  while (output.length > size && quality > 10) {
+    quality -= 10;
+    output = await sharp(buffer).jpeg({ quality }).toBuffer();
+  }
+  return "data:image/jpeg;base64," + output.toString("base64");
+}
+
+export async function zipImageResolution(completeBase64: string, width: number, height: number): Promise<string> {
+  const buffer = Buffer.from(completeBase64.split(",")[1], "base64");
+  const out = await sharp(buffer).resize(width, height).toBuffer();
+  return `data:image/jpeg;base64,${out.toString("base64")}`;
+}
+
+// URL to Base64
+export async function urlToBase64(url: string): Promise<string> {
+  const res = await axios.get(url, { responseType: "arraybuffer" });
+  const mime = res.headers["content-type"] || "image/jpeg";
+  const b64 = Buffer.from(res.data).toString("base64");
+  return `data:${mime};base64,${b64}`;
+}
+
+export async function pollTask(
+  fn: () => Promise<{ completed: boolean; data?: string; error?: string }>,
+  interval = 3000,
+  timeout = 3000000,
+): Promise<{ completed: boolean; data?: string; error?: string }> {
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    try {
+      const result = await fn();
+      if (result.completed) return result;
+      if (result?.error) return result;
+    } catch (e: any) {
+      return { completed: false, error: u.error(e).message || "poll error" };
+    }
+    await new Promise((res) => setTimeout(res, interval));
+  }
+  return { completed: false, error: "timeout" };
+}
+
+/**
+ * Merge multiple images horizontally into one, ensuring output does not exceed size limit
+ * @param imageBase64List - array of base64-encoded images
+ * @param maxSize - maximum output size, e.g. "10mb", "5MB", "1024kb"
+ * @returns merged image base64 string
+ */
+export async function mergeImages(imageBase64List: string[], maxSize = "10mb"): Promise<string> {
+  if (imageBase64List.length === 0) {
+    throw new Error("Image list cannot be empty");
+  }
+
+  const maxBytes = parseSize(maxSize);
+  const imageBuffers = imageBase64List.map(base64ToBuffer);
+  const imageMetadatas = await Promise.all(imageBuffers.map((buffer) => sharp(buffer).metadata()));
+  const maxHeight = Math.max(...imageMetadatas.map((m) => m.height || 0));
+
+  // Calculate adjusted widths for each image
+  const imageWidths = imageMetadatas.map((metadata) => {
+    const aspectRatio = (metadata.width || 1) / (metadata.height || 1);
+    return Math.round(maxHeight * aspectRatio);
+  });
+  const totalWidth = imageWidths.reduce((sum, w) => sum + w, 0);
+
+  // Merge images
+  const resizedImages = await Promise.all(
+    imageBuffers.map(async (buffer, index) => {
+      return sharp(buffer).resize(imageWidths[index], maxHeight, { fit: "cover" }).toBuffer();
+    }),
+  );
+
+  let currentX = 0;
+  const compositeInputs = resizedImages.map((buffer, index) => {
+    const input = { input: buffer, left: currentX, top: 0 };
+    currentX += imageWidths[index];
+    return input;
+  });
+
+  const mergedBuffer = await sharp({
+    create: {
+      width: totalWidth,
+      height: maxHeight,
+      channels: 4,
+      background: { r: 255, g: 255, b: 255, alpha: 1 },
+    },
+  })
+    .composite(compositeInputs)
+    .jpeg({ quality: 90 })
+    .toBuffer();
+
+  // Reuse compression logic
+  const resultBuffer = await compressToSize(mergedBuffer, maxBytes, totalWidth, maxHeight);
+  return resultBuffer.toString("base64");
+}
+
+/**
+ * Parse size string to bytes
+ */
+function parseSize(size: string): number {
+  const match = size.toLowerCase().match(/^(\d+(?:\.\d+)?)\s*(kb|mb|gb|b)?$/);
+  if (!match) {
+    throw new Error(`Invalid size format: ${size}`);
+  }
+  const value = parseFloat(match[1]);
+  const unit = match[2] || "b";
+  const multipliers: Record<string, number> = {
+    b: 1,
+    kb: 1024,
+    mb: 1024 * 1024,
+    gb: 1024 * 1024 * 1024,
+  };
+  return Math.floor(value * multipliers[unit]);
+}
+
+/**
+ * Convert base64 string to Buffer
+ */
+function base64ToBuffer(base64: string): Buffer {
+  const base64Data = base64.replace(/^data:image\/\w+;base64,/, "");
+  return Buffer.from(base64Data, "base64");
+}
+
+/**
+ * Compress Buffer to target size
+ */
+async function compressToSize(imageBuffer: Buffer, maxBytes: number, originalWidth: number, originalHeight: number): Promise<Buffer> {
+  let quality = 90;
+  let scale = 1;
+
+  while (true) {
+    const targetWidth = Math.round(originalWidth * scale);
+    const targetHeight = Math.round(originalHeight * scale);
+
+    const resultBuffer = await sharp(imageBuffer).resize(targetWidth, targetHeight, { fit: "fill" }).jpeg({ quality }).toBuffer();
+
+    if (resultBuffer.length <= maxBytes) {
+      return resultBuffer;
+    }
+
+    if (quality > 10) {
+      quality -= 10;
+    } else {
+      quality = 90;
+      scale *= 0.8;
+    }
+  }
+}

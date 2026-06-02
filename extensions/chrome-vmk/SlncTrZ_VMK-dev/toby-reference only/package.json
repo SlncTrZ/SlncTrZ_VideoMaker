@@ -1,0 +1,16 @@
+{
+  "name": "toby-flow",
+  "version": "2.1.0",
+  "private": true,
+  "description": "Auto-submit prompts on Google Flow (labs.google/fx)",
+  "scripts": {
+    "dev": "node build.mjs --watch",
+    "build": "node build.mjs --production",
+    "clean": "node -e \"const fs = require('fs'); fs.rmSync('dist', { recursive: true, force: true }); console.log('dist/ cleaned');\"",
+    "i18n:export": "node ../data/scripts/export_i18n_to_json.js",
+    "i18n:drift": "node ../data/scripts/check_settings_drift.js"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0"
+  }
+}

@@ -1,0 +1,38 @@
+import express from "express";
+import u from "@/utils";
+import { z } from "zod";
+import { success } from "@/lib/responseFormat";
+import { validateFields } from "@/middleware/middleware";
+
+const router = express.Router();
+
+// Clean novel text and generate event list
+export default router.post(
+  "/",
+  validateFields({
+    projectId: z.number(),
+    novelIds: z.array(z.number()),
+    concurrentCount: z.number().min(1).optional(),
+  }),
+  async (req, res) => {
+    const { projectId, novelIds, concurrentCount = 5 } = req.body;
+
+    const [allChapters, novel] = await Promise.all([
+      u.db("o_novel").where("projectId", projectId).whereIn("id", novelIds),
+      Promise.resolve(new u.cleanNovel(concurrentCount)),
+    ]);
+    if (allChapters.length === 0) {
+      return res.status(400).send(success("No corresponding chapters"));
+    }
+    await u.db("o_novel").where("projectId", projectId).whereIn("id", novelIds).update({ eventState: 0, event: null });
+    novel.emitter.on("item", async (item) => {
+      await u
+        .db("o_novel")
+        .where("id", item.id)
+        .update({ event: item.event, eventState: item.event ? 1 : -1, errorReason: item?.errorReason ?? null });
+    });
+    novel.start(allChapters, projectId);
+
+    return res.status(200).send(success("Events generated successfully"));
+  },
+);
