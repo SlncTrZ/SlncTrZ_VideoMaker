@@ -40,6 +40,15 @@ export default router.post(
           }),
         ),
       }),
+      z.object({
+        name: z.string(),
+        modelName: z.string(),
+        type: z.literal("tts"),
+        voices: z.array(z.object({
+          title: z.string(),
+          voice: z.string(),
+        })),
+      }),
     ]),
   }),
   async (req, res) => {
