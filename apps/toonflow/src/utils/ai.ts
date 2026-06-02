@@ -256,7 +256,7 @@ class AiImage {
     const exec = async (mn: `${string}:${string}`) => {
       const fn = await getVendorTemplateFn("imageRequest", mn);
       await referenceList2imageBase642(mn.split(/:(.+)/)[0], input);
-      this.result = await fn(input);
+      this.result = (await fn(input)) ?? "";
       if (this.result.startsWith("http")) this.result = await urlToBase64(this.result);
       return this;
     };
@@ -304,7 +304,7 @@ class AiVideo {
         const fn = await getVendorTemplateFn("videoRequest", mn);
         await referenceList2imageBase642(mn.split(/:(.+)/)[0], input);
 
-        this.result = await fn(input);
+        this.result = (await fn(input)) ?? "";
 
         if (this.result.startsWith("http")) this.result = await urlToBase64(this.result);
       };
@@ -335,7 +335,7 @@ class AiAudio {
       try {
         const fn = await getVendorTemplateFn("ttsRequest", mn);
         await referenceList2imageBase642(mn.split(/:(.+)/)[0], input);
-        this.result = await fn(input);
+        this.result = (await fn(input)) ?? "";
 
         if (this.result.startsWith("http")) this.result = await urlToBase64(this.result);
         return this;
