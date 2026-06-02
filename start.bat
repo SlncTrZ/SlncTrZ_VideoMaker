@@ -2,8 +2,16 @@
 title SlncTrZ_VideoMaker
 cd /d "%~dp0"
 
+:: Switch to UTF-8 for Unicode box-drawing characters
+chcp 65001 >nul
+
 echo.
-echo ========== SlncTrZ_VideoMaker - Starting All Services ==========
+echo  ╔═══╗ ╦  ╦ ╔═╗ ╔═╗ ╔═══╗ ╦   ╦
+echo  ╚══╗║ ╚╗╔╝ ║ ║ ║ ║ ╚══╗║ ╚╗ ╔╝
+echo  ╔══╝║  ╚╝  ╚═╝ ╚═╝ ╔══╝║  ╚╗╔╝
+echo  ╚═══╝       ╚═══╝  ╚═══╝   ╚╝
+echo.
+echo ====== Video Maker - Starting All Services ======
 echo.
 
 :: Prerequisites
