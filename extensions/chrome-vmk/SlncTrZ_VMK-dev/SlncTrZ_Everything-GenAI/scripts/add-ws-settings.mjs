@@ -16,7 +16,7 @@ const wsField = `
         <div class="s-field">
           <label for="wsBridgeUrl">WebSocket URL</label>
           <div class="s-input-group">
-            <input type="text" id="wsBridgeUrl" value="ws://192.168.1.227:1888" placeholder="ws://192.168.1.227:1888" />
+            <input type="text" id="wsBridgeUrl" value="ws://localhost:10588/api/bridge/ws" placeholder="ws://localhost:10588/api/bridge/ws" />
           </div>
           <span class="s-hint">Địa chỉ WebSocket server (bridge) để kết nối với n8n.</span>
         </div>
@@ -60,7 +60,7 @@ js = js.replace(
 // Add load handler
 js = js.replace(
   'if (els.telegramDownloadResolution) els.telegramDownloadResolution.value = s.telegram_download_resolution || \'1k\';',
-  'if (els.telegramDownloadResolution) els.telegramDownloadResolution.value = s.telegram_download_resolution || \'1k\';\n      if (els.wsBridgeUrl) els.wsBridgeUrl.value = s.ws_bridge_url || \'ws://192.168.1.227:1888\';'
+  'if (els.telegramDownloadResolution) els.telegramDownloadResolution.value = s.telegram_download_resolution || \'1k\';\n      if (els.wsBridgeUrl) els.wsBridgeUrl.value = s.ws_bridge_url || \'ws://localhost:10588/api/bridge/ws\';'
 );
 
 fs.writeFileSync(base + '\\settings-page.js', js, 'utf-8');
@@ -71,8 +71,8 @@ let bg = fs.readFileSync(base + '\\background.js', 'utf-8');
 
 // Replace the hardcoded default URL to use storage config
 bg = bg.replace(
-  "url: 'ws://192.168.1.227:1888',",
-  "url: 'ws://localhost:1888',  // Overridden by af_ws_config in chrome.storage"
+  "url: 'ws://localhost:10588/api/bridge/ws',",
+  "url: 'ws://localhost:10588/api/bridge/ws',  // Embedded in ToonFlow (override via af_ws_config)"
 );
 
 // Add a note about configuring via Settings

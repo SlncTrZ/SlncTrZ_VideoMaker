@@ -6,10 +6,10 @@
  * Image models: Nano Banana (via Google Flow)
  * Video models: Veo 3.1 (via Google Flow)
  *
- * Usage:
- *   1. Start ws-bridge: node tools/ws-bridge/ws-bridge-server.mjs
- *   2. Ensure SlncTrZ_Everything-GenAI extension is connected (auto-connect ws://localhost:1888)
- *   3. Select a model in Toonflow's image/video generation
+   * Usage:
+   *   1. ToonFlow serves WS-Bridge internally at /api/bridge/*
+   *   2. Ensure SlncTrZ_Everything-GenAI extension is connected (auto-connect ws://localhost:10588/api/bridge/ws)
+   *   3. Select a model in Toonflow's image/video generation
  */
 
 type VideoMode =
@@ -89,7 +89,7 @@ const vendor: VendorConfig = {
   description: "Veo 3.1 video generation via Google Flow (labs.google.com/fx) through ws-bridge",
   icon: "🎬",
   inputs: [
-    { key: "bridgeUrl", label: "WS-Bridge URL (HTTP)", type: "url", required: true, placeholder: "http://localhost:1889" },
+    { key: "bridgeUrl", label: "Bridge URL (HTTP, embedded in ToonFlow)", type: "url", required: true, placeholder: "http://localhost:10588/api/bridge" },
   ],
   inputValues: {
     bridgeUrl: "http://localhost:10588/api/bridge",
