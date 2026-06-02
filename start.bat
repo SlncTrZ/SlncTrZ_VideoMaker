@@ -24,26 +24,43 @@ set TOONFLOW_PORT=10588
 set OMNIVOICE_PORT=8880
 
 :: Kill old processes
-echo [1/4] Killing old processes on ports %TOONFLOW_PORT%, %OMNIVOICE_PORT%...
+echo [1/4] Cleaning ports %TOONFLOW_PORT%, %OMNIVOICE_PORT%...
 for %%p in (%TOONFLOW_PORT% %OMNIVOICE_PORT%) do (
     for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":%%p "') do (
         taskkill /f /pid %%a >nul 2>&1
     )
 )
-timeout /t 2 /nobreak >nul
 
-:: Start OmniVoice
-echo [2/4] Starting OmniVoice on port %OMNIVOICE_PORT%...
-start "OmniVoice" cmd /c "set OMNIVOICE_PORT=%OMNIVOICE_PORT% && cd /d apps\omnivoice && mkdir logs 2>nul && python -m omnivoice_server.cli --port %OMNIVOICE_PORT% --host 127.0.0.1 --device auto --model k2-fsa/OmniVoice"
-timeout /t 5 /nobreak >nul
+:: Start both services simultaneously
+echo [2/4] Starting OmniVoice (port %OMNIVOICE_PORT%)...
+start "OmniVoice" cmd /c "title OmniVoice && set OMNIVOICE_PORT=%OMNIVOICE_PORT% && cd /d apps\omnivoice && mkdir logs 2>nul && python -m omnivoice_server.cli --port %OMNIVOICE_PORT% --host 127.0.0.1 --device auto --model k2-fsa/OmniVoice"
 
-:: Start ToonFlow
-echo [3/4] Starting ToonFlow (WS-Bridge embedded) on port %TOONFLOW_PORT%...
-start "ToonFlow" cmd /c "set PORT=%TOONFLOW_PORT% && cd /d apps\toonflow && yarn dev"
-timeout /t 3 /nobreak >nul
+echo [3/4] Starting ToonFlow (port %TOONFLOW_PORT%)...
+start "ToonFlow" cmd /c "title ToonFlow && set PORT=%TOONFLOW_PORT% && cd /d apps\toonflow && yarn dev"
+
+:: Health check — wait for both services
+echo [4/4] Waiting for services (this may take a minute)...
+echo.
+
+:: Check OmniVoice (timeout 120s)
+powershell -c ^
+"$t=(get-date); $ok=$false; " ^
+"while(((get-date)-$t).totalseconds -lt 120 -and !$ok){ " ^
+"  try{ $r=curl.exe -s -f http://127.0.0.1:%OMNIVOICE_PORT%/health 2>$null; if($LASTEXITCODE -eq 0){ $ok=$true } }catch{} " ^
+"  if(!$ok){ write-host '.' -nonewline; start-sleep 3 } " ^
+"} " ^
+"if($ok){ write-host ''; write-host '[OK] OmniVoice ready' -f green }else{ write-host ''; write-host '[WARN] OmniVoice timeout' -f yellow }"
+
+:: Check ToonFlow (timeout 60s)
+powershell -c ^
+"$t=(get-date); $ok=$false; " ^
+"while(((get-date)-$t).totalseconds -lt 60 -and !$ok){ " ^
+"  try{ $r=curl.exe -s -f http://127.0.0.1:%TOONFLOW_PORT%/api/bridge/status 2>$null; if($LASTEXITCODE -eq 0){ $ok=$true } }catch{} " ^
+"  if(!$ok){ write-host '.' -nonewline; start-sleep 2 } " ^
+"} " ^
+"if($ok){ write-host ''; write-host '[OK] ToonFlow ready' -f green }else{ write-host ''; write-host '[WARN] ToonFlow timeout' -f yellow }"
 
 :: Dashboard
-echo [4/4] Ready!
 echo.
 echo +----------------------------------------------------+
 echo |  [1] ToonFlow  http://localhost:%TOONFLOW_PORT%             |
@@ -51,7 +68,7 @@ echo |  [2] WS-Bridge ws://localhost:%TOONFLOW_PORT%/api/bridge/ws |
 echo |  [3] OmniVoice http://localhost:%OMNIVOICE_PORT%             |
 echo |  [4] OmniDocs  http://localhost:%OMNIVOICE_PORT%/docs        |
 echo +----------------------------------------------------+
-echo |  Close this window = Stop ALL services             |
+echo |  Press Enter = Stop all services                   |
 echo +----------------------------------------------------+
 echo.
 
@@ -67,5 +84,5 @@ for %%p in (%TOONFLOW_PORT% %OMNIVOICE_PORT%) do (
         taskkill /f /pid %%a >nul 2>&1
     )
 )
-echo Done. Press Enter to exit.
-pause >nul
+echo Done.
+timeout /t 2 /nobreak >nul
