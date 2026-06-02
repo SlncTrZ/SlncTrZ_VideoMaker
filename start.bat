@@ -2,22 +2,17 @@
 title SlncTrZ_VideoMaker
 cd /d "%~dp0"
 
-:: Switch to UTF-8 for Unicode box-drawing characters
-chcp 65001 >nul
-
 echo.
-echo  ╔═══╗ ╦  ╦ ╔═╗ ╔═╗ ╔═══╗ ╦   ╦
-echo  ╚══╗║ ╚╗╔╝ ║ ║ ║ ║ ╚══╗║ ╚╗ ╔╝
-echo  ╔══╝║  ╚╝  ╚═╝ ╚═╝ ╔══╝║  ╚╗╔╝
-echo  ╚═══╝       ╚═══╝  ╚═══╝   ╚╝
-echo.
-echo ====== Video Maker - Starting All Services ======
+echo  /==============================================\
+echo  [         S L N C   T R Z   V I D E O         ]
+echo  [             Video Maker - Start              ]
+echo  \==============================================/
 echo.
 
 :: Prerequisites
-where python >nul 2>&1 || ( echo [FAIL] Python not found in PATH & pause & exit /b 1 )
-where node >nul 2>&1   || ( echo [FAIL] Node.js not found in PATH & pause & exit /b 1 )
-where yarn >nul 2>&1   || ( echo [FAIL] Yarn not found in PATH & pause & exit /b 1 )
+where python >nul 2>&1 || ( echo [FAIL] Python not found & pause & exit /b 1 )
+where node >nul 2>&1   || ( echo [FAIL] Node.js not found & pause & exit /b 1 )
+where yarn >nul 2>&1   || ( echo [FAIL] Yarn not found & pause & exit /b 1 )
 
 :: Ports
 set TOONFLOW_PORT=10588
@@ -31,34 +26,22 @@ for %%p in (%TOONFLOW_PORT% %OMNIVOICE_PORT%) do (
     )
 )
 
-:: Start both services simultaneously
+:: Start services
 echo [2/4] Starting OmniVoice (port %OMNIVOICE_PORT%)...
 start "OmniVoice" cmd /c "title OmniVoice && set OMNIVOICE_PORT=%OMNIVOICE_PORT% && cd /d apps\omnivoice && mkdir logs 2>nul && python -m omnivoice_server.cli --port %OMNIVOICE_PORT% --host 127.0.0.1 --device auto --model k2-fsa/OmniVoice"
 
 echo [3/4] Starting ToonFlow (port %TOONFLOW_PORT%)...
 start "ToonFlow" cmd /c "title ToonFlow && set PORT=%TOONFLOW_PORT% && cd /d apps\toonflow && yarn dev"
 
-:: Health check — wait for both services
-echo [4/4] Waiting for services (this may take a minute)...
+:: Health check
+echo [4/4] Waiting for services...
 echo.
 
-:: Check OmniVoice (timeout 120s)
-powershell -c ^
-"$t=(get-date); $ok=$false; " ^
-"while(((get-date)-$t).totalseconds -lt 120 -and !$ok){ " ^
-"  try{ $r=curl.exe -s -f http://127.0.0.1:%OMNIVOICE_PORT%/health 2>$null; if($LASTEXITCODE -eq 0){ $ok=$true } }catch{} " ^
-"  if(!$ok){ write-host '.' -nonewline; start-sleep 3 } " ^
-"} " ^
-"if($ok){ write-host ''; write-host '[OK] OmniVoice ready' -f green }else{ write-host ''; write-host '[WARN] OmniVoice timeout' -f yellow }"
+echo Checking OmniVoice...
+powershell -c "$t=(get-date); $ok=$false; while(((get-date)-$t).totalseconds -lt 120 -and !$ok){ try{ $r=curl.exe -s -f http://127.0.0.1:%OMNIVOICE_PORT%/health 2>$null; if($LASTEXITCODE -eq 0){ $ok=$true } }catch{} if(!$ok){ write-host '.' -nonewline; start-sleep 3 } }; if($ok){ write-host ''; write-host '[OK] OmniVoice ready' -f Green }else{ write-host ''; write-host '[WARN] OmniVoice timeout' -f Yellow }"
 
-:: Check ToonFlow (timeout 60s)
-powershell -c ^
-"$t=(get-date); $ok=$false; " ^
-"while(((get-date)-$t).totalseconds -lt 60 -and !$ok){ " ^
-"  try{ $r=curl.exe -s -f http://127.0.0.1:%TOONFLOW_PORT%/api/bridge/status 2>$null; if($LASTEXITCODE -eq 0){ $ok=$true } }catch{} " ^
-"  if(!$ok){ write-host '.' -nonewline; start-sleep 2 } " ^
-"} " ^
-"if($ok){ write-host ''; write-host '[OK] ToonFlow ready' -f green }else{ write-host ''; write-host '[WARN] ToonFlow timeout' -f yellow }"
+echo Checking ToonFlow...
+powershell -c "$t=(get-date); $ok=$false; while(((get-date)-$t).totalseconds -lt 60 -and !$ok){ try{ $r=curl.exe -s -f http://127.0.0.1:%TOONFLOW_PORT%/api/bridge/status 2>$null; if($LASTEXITCODE -eq 0){ $ok=$true } }catch{} if(!$ok){ write-host '.' -nonewline; start-sleep 2 } }; if($ok){ write-host ''; write-host '[OK] ToonFlow ready' -f Green }else{ write-host ''; write-host '[WARN] ToonFlow timeout' -f Yellow }"
 
 :: Dashboard
 echo.
@@ -68,7 +51,7 @@ echo |  [2] WS-Bridge ws://localhost:%TOONFLOW_PORT%/api/bridge/ws |
 echo |  [3] OmniVoice http://localhost:%OMNIVOICE_PORT%             |
 echo |  [4] OmniDocs  http://localhost:%OMNIVOICE_PORT%/docs        |
 echo +----------------------------------------------------+
-echo |  Press Enter = Stop all services                   |
+echo |  Press Enter to stop all services                  |
 echo +----------------------------------------------------+
 echo.
 
