@@ -1,18 +1,11 @@
 #!/usr/bin/env node
 /**
- * WebSocket Bridge Server — DEPRECATED
+ * WebSocket Bridge Server — chạy song song với ToonFlow
  * 
- * WS-Bridge đã được embedded vào ToonFlow (src/app.ts → src/bridge/).
- * File này giữ lại cho backward compatibility. KHÔNG chạy riêng.
- * 
- * Bridge mới:
- *   WS  → ws://localhost:10588/api/bridge/ws
- *   HTTP → http://localhost:10588/api/bridge
- * 
- * Cách dùng CŨ (sẽ bỏ):
+ * Cách dùng:
  *   node tools/ws-bridge/ws-bridge-server.mjs
  * 
- * Chức năng CŨ:
+ * Chức năng:
  *   1. WebSocket server port 1888 — extension kết nối đến
  *   2. HTTP POST port 1889 — n8n/Toonflow gửi lệnh đến
  *   3. Queue commands từ nhiều POST, forward đến extension từng cái một
