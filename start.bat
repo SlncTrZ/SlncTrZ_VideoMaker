@@ -19,16 +19,21 @@ set TOONFLOW_PORT=10588
 set OMNIVOICE_PORT=8880
 
 :: Kill old processes (ToonFlow + OmniVoice + ws-bridge)
-echo [1/5] Cleaning ports %TOONFLOW_PORT%, %OMNIVOICE_PORT%, 1888, 1889...
-for %%p in (%TOONFLOW_PORT% %OMNIVOICE_PORT% 1888 1889) do (
+echo [1/5] Cleaning ports %TOONFLOW_PORT%, %OMNIVOICE_PORT%, 8881, 1888, 1889...
+for %%p in (%TOONFLOW_PORT% %OMNIVOICE_PORT% 8881 1888 1889) do (
     for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":%%p "') do (
         taskkill /f /pid %%a >nul 2>&1
     )
 )
 
-:: Start OmniVoice
-echo [2/5] Starting OmniVoice (port %OMNIVOICE_PORT%)...
-start "OmniVoice" cmd /c "title OmniVoice && set OMNIVOICE_PORT=%OMNIVOICE_PORT% && cd /d apps\omnivoice && mkdir logs 2>nul && python -m omnivoice_server.cli --port %OMNIVOICE_PORT% --host 127.0.0.1 --device auto --model k2-fsa/OmniVoice"
+:: Start OmniVoice API
+echo [2/5] Starting OmniVoice API (port %OMNIVOICE_PORT%)...
+start "OmniVoice" cmd /c "title OmniVoice-API && set OMNIVOICE_PORT=%OMNIVOICE_PORT% && cd /d apps\omnivoice && mkdir logs 2>nul && python -m omnivoice_server.cli --port %OMNIVOICE_PORT% --host 127.0.0.1 --device auto --model k2-fsa/OmniVoice"
+
+:: Start OmniVoice Gradio UI
+set OMNIVOICE_GRADIO_PORT=8881
+echo [2b/5] Starting OmniVoice Gradio UI (port %OMNIVOICE_GRADIO_PORT%)...
+start "OmniVoiceUI" cmd /c "title OmniVoice-UI && set OMNIVOICE_PORT=%OMNIVOICE_PORT% && cd /d apps\omnivoice && python -m omnivoice.cli.demo --model k2-fsa/OmniVoice --port %OMNIVOICE_GRADIO_PORT% --device auto"
 
 :: Start WS-Bridge (standalone, extension connects here)
 echo [3/5] Starting WS-Bridge (ports 1888/1889)...
@@ -51,10 +56,11 @@ powershell -c "$t=(get-date); $ok=$false; while(((get-date)-$t).totalseconds -lt
 :: Dashboard
 echo.
 echo +----------------------------------------------------+
-echo |  [1] ToonFlow  http://localhost:%TOONFLOW_PORT%             |
-echo |  [2] WS-Bridge ws://localhost:1888                      |
-echo |  [3] OmniVoice http://localhost:%OMNIVOICE_PORT%             |
-echo |  [4] OmniDocs  http://localhost:%OMNIVOICE_PORT%/docs        |
+echo |  [1] ToonFlow   http://localhost:%TOONFLOW_PORT%            |
+echo |  [2] WS-Bridge  ws://localhost:1888                    |
+echo |  [3] OmniVoice  http://localhost:%OMNIVOICE_PORT%            |
+echo |  [4] OmniDocs   http://localhost:%OMNIVOICE_PORT%/docs       |
+echo |  [5] Gradio UI  http://localhost:%OMNIVOICE_GRADIO_PORT%     |
 echo +----------------------------------------------------+
 echo |  Press Enter to stop all services                  |
 echo +----------------------------------------------------+
@@ -67,8 +73,9 @@ echo.
 echo Stopping services...
 taskkill /fi "WindowTitle eq ToonFlow*" /f >nul 2>&1
 taskkill /fi "WindowTitle eq OmniVoice*" /f >nul 2>&1
+taskkill /fi "WindowTitle eq OmniVoiceUI*" /f >nul 2>&1
 taskkill /fi "WindowTitle eq WSBridge*" /f >nul 2>&1
-for %%p in (%TOONFLOW_PORT% %OMNIVOICE_PORT% 1888 1889) do (
+for %%p in (%TOONFLOW_PORT% %OMNIVOICE_PORT% 8881 1888 1889) do (
     for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":%%p "') do (
         taskkill /f /pid %%a >nul 2>&1
     )
