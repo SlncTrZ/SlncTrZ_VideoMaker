@@ -92,7 +92,7 @@ const vendor: VendorConfig = {
     { key: "bridgeUrl", label: "WS-Bridge URL (HTTP)", type: "url", required: true, placeholder: "http://localhost:1889" },
   ],
   inputValues: {
-    bridgeUrl: "http://localhost:1889",
+    bridgeUrl: "http://localhost:10588/api/bridge",
   },
   models: [
     {

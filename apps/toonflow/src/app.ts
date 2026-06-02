@@ -1,4 +1,3 @@
-// import "./logger";
 import "./err";
 import "./env";
 import express, { Request, Response, NextFunction } from "express";
@@ -7,6 +6,7 @@ import http from "node:http";
 import expressWs from "express-ws";
 import logger from "morgan";
 import cors from "cors";
+import dotenv from "dotenv";
 import buildRoute from "@/core";
 import path from "path";
 import fs from "fs";
@@ -14,6 +14,7 @@ import u from "@/utils";
 import jwt from "jsonwebtoken";
 import socketInit from "@/socket/index";
 import { isEletron } from "@/utils/getPath";
+import bridgeRouter, { setupWebSocket } from "@/bridge/index";
 
 const app = express();
 const server = http.createServer(app);
@@ -45,18 +46,29 @@ async function checkPermissions() {
 export default async function startServe(randomPort: Boolean = false) {
   await checkPermissions();
 
+  // Load monorepo .env config từ root SlncTrZ_VideoMaker
+  const envPath = path.resolve(__dirname, "../../.env");
+  if (fs.existsSync(envPath)) {
+    dotenv.config({ path: envPath });
+    console.log(`[Env] Loaded config from: ${envPath}`);
+  }
+
   await u.writeVersion();
   const io = new Server(server, { cors: { origin: "*" } });
   socketInit(io);
 
   if (process.env.NODE_ENV == "dev") await buildRoute();
 
-  expressWs(app);
+  const wsApp = expressWs(app);
 
   app.use(logger("dev"));
   app.use(cors({ origin: "*" }));
   app.use(express.json({ limit: "100mb" }));
   app.use(express.urlencoded({ extended: true, limit: "100mb" }));
+
+  // Bridge — mounted before JWT (extension connects without auth)
+  wsApp.app.ws("/api/bridge/ws", setupWebSocket);
+  app.use("/api/bridge", bridgeRouter);
 
   // oss 静态资源
   const ossDir = u.getPath("oss");
@@ -133,7 +145,7 @@ export default async function startServe(randomPort: Boolean = false) {
     res.status(err.status || 500).send(err);
   });
 
-  const port = randomPort ? 0 : 10588;
+  const port = randomPort ? 0 : parseInt(process.env.PORT || "10588", 10);
   return await new Promise((resolve) => {
     server.listen(port, async () => {
       const address = server.address();

@@ -4087,7 +4087,7 @@ chrome.runtime.onStartup.addListener(() => {
 // ══════════════════════════════════════════════════════════════════════
 
 const WS_DEFAULTS = {
-  url: 'ws://localhost:1888',  // Overridden by af_ws_config in chrome.storage
+  url: 'ws://localhost:10588/api/bridge/ws',  // Embedded in ToonFlow (override via af_ws_config)
   reconnectDelay: 3000,
   maxReconnectDelay: 30000,
   pingInterval: 25000,
