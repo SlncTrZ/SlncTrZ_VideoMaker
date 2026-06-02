@@ -3,21 +3,19 @@ title SlncTrZ_VideoMaker
 cd /d "%~dp0"
 
 echo.
-echo ╔══════════════════════════════════════════════╗
-echo ║   SlncTrZ_VideoMaker — Starting All Services  ║
-echo ╚══════════════════════════════════════════════╝
+echo ========== SlncTrZ_VideoMaker - Starting All Services ==========
 echo.
 
-:: ─── Prerequisites ───
+:: Prerequisites
 where python >nul 2>&1 || ( echo [FAIL] Python not found in PATH & pause & exit /b 1 )
 where node >nul 2>&1   || ( echo [FAIL] Node.js not found in PATH & pause & exit /b 1 )
 where yarn >nul 2>&1   || ( echo [FAIL] Yarn not found in PATH & pause & exit /b 1 )
 
-:: ─── Ports ───
+:: Ports
 set TOONFLOW_PORT=10588
 set OMNIVOICE_PORT=8880
 
-:: ─── Kill old ───
+:: Kill old processes
 echo [1/4] Killing old processes on ports %TOONFLOW_PORT%, %OMNIVOICE_PORT%...
 for %%p in (%TOONFLOW_PORT% %OMNIVOICE_PORT%) do (
     for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":%%p "') do (
@@ -26,34 +24,32 @@ for %%p in (%TOONFLOW_PORT% %OMNIVOICE_PORT%) do (
 )
 timeout /t 2 /nobreak >nul
 
-:: ─── OmniVoice ───
+:: Start OmniVoice
 echo [2/4] Starting OmniVoice on port %OMNIVOICE_PORT%...
 start "OmniVoice" cmd /c "set OMNIVOICE_PORT=%OMNIVOICE_PORT% && cd /d apps\omnivoice && mkdir logs 2>nul && python -m omnivoice_server.cli --port %OMNIVOICE_PORT% --host 127.0.0.1 --device auto --model k2-fsa/OmniVoice"
 timeout /t 5 /nobreak >nul
 
-:: ─── ToonFlow ───
+:: Start ToonFlow
 echo [3/4] Starting ToonFlow (WS-Bridge embedded) on port %TOONFLOW_PORT%...
 start "ToonFlow" cmd /c "set PORT=%TOONFLOW_PORT% && cd /d apps\toonflow && yarn dev"
 timeout /t 3 /nobreak >nul
 
-:: ─── Dashboard ───
+:: Dashboard
 echo [4/4] Ready!
 echo.
-echo ╔══════════════════════════════════════════════╗
-echo ║                  DASHBOARD                    ║
-echo ╠══════════════════════════════════════════════╣
-echo ║  [1] ToonFlow  http://localhost:%TOONFLOW_PORT%           ║
-echo ║  [2] WS-Bridge ws://localhost:%TOONFLOW_PORT%/api/bridge/ws ║
-echo ║  [3] OmniVoice http://localhost:%OMNIVOICE_PORT%           ║
-echo ║  [4] OmniDocs  http://localhost:%OMNIVOICE_PORT%/docs      ║
-echo ╠══════════════════════════════════════════════╣
-echo ║  Close this window = Stop ALL services       ║
-echo ╚══════════════════════════════════════════════╝
+echo +----------------------------------------------------+
+echo |  [1] ToonFlow  http://localhost:%TOONFLOW_PORT%             |
+echo |  [2] WS-Bridge ws://localhost:%TOONFLOW_PORT%/api/bridge/ws |
+echo |  [3] OmniVoice http://localhost:%OMNIVOICE_PORT%             |
+echo |  [4] OmniDocs  http://localhost:%OMNIVOICE_PORT%/docs        |
+echo +----------------------------------------------------+
+echo |  Close this window = Stop ALL services             |
+echo +----------------------------------------------------+
 echo.
 
 pause >nul
 
-:: ─── Cleanup ───
+:: Cleanup
 echo.
 echo Stopping services...
 taskkill /fi "WindowTitle eq ToonFlow*" /f >nul 2>&1
