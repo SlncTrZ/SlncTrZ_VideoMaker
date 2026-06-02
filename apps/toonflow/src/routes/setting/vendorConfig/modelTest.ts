@@ -11,7 +11,7 @@ export default router.post(
   "/",
   validateFields({
     modelName: z.string(),
-    type: z.enum(["text", "video", "image"]),
+    type: z.enum(["text", "video", "image", "tts"]),
     id: z.string(),
   }),
   async (req, res) => {

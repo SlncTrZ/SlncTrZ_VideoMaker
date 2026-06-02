@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TTS Test - SlncTrZ VideoMaker</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; display: flex; justify-content: center; padding: 40px 20px; }
+.card { background: white; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); padding: 32px; max-width: 600px; width: 100%; }
+h1 { font-size: 20px; font-weight: 600; margin-bottom: 24px; color: #1a1a1a; }
+.form-group { margin-bottom: 16px; }
+label { display: block; font-size: 14px; font-weight: 500; color: #333; margin-bottom: 6px; }
+textarea, select, input { width: 100%; padding: 10px 12px; border: 1px solid #d0d0d0; border-radius: 8px; font-size: 14px; outline: none; transition: border-color .2s; }
+textarea:focus, select:focus, input:focus { border-color: #2563eb; }
+textarea { min-height: 100px; resize: vertical; font-family: inherit; }
+button { background: #2563eb; color: white; border: none; border-radius: 8px; padding: 12px 24px; font-size: 15px; font-weight: 500; cursor: pointer; width: 100%; transition: background .2s; }
+button:hover { background: #1d4ed8; }
+button:disabled { background: #93c5fd; cursor: not-allowed; }
+.status { margin-top: 16px; padding: 12px; border-radius: 8px; font-size: 14px; display: none; }
+.status.success { display: block; background: #dcfce7; color: #166534; }
+.status.error { display: block; background: #fee2e2; color: #991b1b; }
+.status.loading { display: block; background: #eff6ff; color: #1e40af; }
+audio { margin-top: 16px; width: 100%; display: none; }
+.row { display: flex; gap: 12px; }
+.row > * { flex: 1; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1> TTS Test — OmniVoice</h1>
+
+  <div class="form-group">
+    <label for="profile">Profile (Voice)</label>
+    <select id="profile"></select>
+  </div>
+
+  <div class="row">
+    <div class="form-group">
+      <label for="speechRate">Speed (0.25 - 4.0)</label>
+      <input type="number" id="speechRate" value="1.0" min="0.25" max="4.0" step="0.25">
+    </div>
+    <div class="form-group">
+      <label for="pitchRate">Pitch (0.5 - 2.0)</label>
+      <input type="number" id="pitchRate" value="1.0" min="0.5" max="2.0" step="0.1">
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label for="text">Text to speak</label>
+    <textarea id="text" placeholder="Nhập nội dung cần chuyển giọng nói...">Xin chào, đây là giọng đọc từ OmniVoice TTS.</textarea>
+  </div>
+
+  <button id="generateBtn" onclick="generateTTS()"> Generate Speech</button>
+
+  <div id="status" class="status"></div>
+  <audio id="audioPlayer" controls></audio>
+</div>
+
+<script>
+const API_BASE = window.location.origin;
+
+async function loadProfiles() {
+  try {
+    const r = await fetch(`${API_BASE}/api/setting/vendorConfig/getVendorList`, { method: 'POST' });
+    const data = await r.json();
+    const omnivoice = data.data?.find(v => v.id === 'omnivoice');
+    if (!omnivoice) {
+      document.getElementById('profile').innerHTML = '<option value="">OmniVoice vendor not found</option>';
+      return;
+    }
+
+    const profileVal = omnivoice.inputValues?.profileIds || '';
+    const profiles = profileVal ? profileVal.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+    let html = '<option value="">Default voice</option>';
+    for (const p of profiles) {
+      html += `<option value="${p}">${p}</option>`;
+    }
+    if (omnivoice.models) {
+      for (const m of omnivoice.models) {
+        if (m.voices) {
+          for (const v of m.voices) {
+            if (!profiles.includes(v.voice)) {
+              html += `<option value="${v.voice}">${v.title} (${v.voice})</option>`;
+            }
+          }
+        }
+      }
+    }
+    document.getElementById('profile').innerHTML = html;
+  } catch (e) {
+    document.getElementById('profile').innerHTML = '<option value="">Error loading profiles</option>';
+  }
+}
+
+async function generateTTS() {
+  const btn = document.getElementById('generateBtn');
+  const status = document.getElementById('status');
+  const audio = document.getElementById('audioPlayer');
+  const text = document.getElementById('text').value.trim();
+  const voice = document.getElementById('profile').value;
+  const speechRate = parseFloat(document.getElementById('speechRate').value) || 1.0;
+
+  if (!text) {
+    status.className = 'status error';
+    status.textContent = 'Please enter text';
+    return;
+  }
+
+  btn.disabled = true;
+  status.className = 'status loading';
+  status.textContent = 'Generating...';
+  audio.style.display = 'none';
+
+  try {
+    const r = await fetch(`${API_BASE}/api/setting/vendorConfig/modelTest/ttsTest`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        modelName: 'OmniVoice TTS',
+        id: 'omnivoice',
+        text: text,
+        voice: voice,
+        speechRate: speechRate,
+      }),
+    });
+
+    const data = await r.json();
+
+    if (data.code === 200 && data.data) {
+      const audioUrl = data.data.startsWith('http') ? data.data : `${API_BASE}${data.data}`;
+      audio.src = audioUrl;
+      audio.style.display = 'block';
+      audio.play();
+      status.className = 'status success';
+      status.textContent = 'Success! Playing audio...';
+    } else {
+      status.className = 'status error';
+      status.textContent = data.message || 'Generation failed';
+    }
+  } catch (e) {
+    status.className = 'status error';
+    status.textContent = 'Error: ' + e.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+loadProfiles();
+</script>
+</body>
+</html>
