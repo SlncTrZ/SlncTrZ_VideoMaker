@@ -18,9 +18,9 @@ where yarn >nul 2>&1   || ( echo [FAIL] Yarn not found & pause & exit /b 1 )
 set TOONFLOW_PORT=10588
 set OMNIVOICE_PORT=8880
 
-:: Kill old processes
+:: Kill old processes (including legacy ws-bridge ports)
 echo [1/4] Cleaning ports %TOONFLOW_PORT%, %OMNIVOICE_PORT%...
-for %%p in (%TOONFLOW_PORT% %OMNIVOICE_PORT%) do (
+for %%p in (%TOONFLOW_PORT% %OMNIVOICE_PORT% 1888 1889) do (
     for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":%%p "') do (
         taskkill /f /pid %%a >nul 2>&1
     )
@@ -62,7 +62,7 @@ echo.
 echo Stopping services...
 taskkill /fi "WindowTitle eq ToonFlow*" /f >nul 2>&1
 taskkill /fi "WindowTitle eq OmniVoice*" /f >nul 2>&1
-for %%p in (%TOONFLOW_PORT% %OMNIVOICE_PORT%) do (
+for %%p in (%TOONFLOW_PORT% %OMNIVOICE_PORT% 1888 1889) do (
     for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":%%p "') do (
         taskkill /f /pid %%a >nul 2>&1
     )
