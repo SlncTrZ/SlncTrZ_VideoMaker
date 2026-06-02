@@ -46,8 +46,8 @@ async function checkPermissions() {
 export default async function startServe(randomPort: Boolean = false) {
   await checkPermissions();
 
-  // Load monorepo .env config từ root SlncTrZ_VideoMaker
-  const envPath = path.resolve(__dirname, "../../.env");
+  // Load monorepo .env config từ root SlncTrZ_VideoMaker (CWD = apps/toonflow/)
+  const envPath = path.resolve(process.cwd(), "../../.env");
   if (fs.existsSync(envPath)) {
     dotenv.config({ path: envPath });
     console.log(`[Env] Loaded config from: ${envPath}`);
